@@ -17,7 +17,7 @@ class ViVQAModel(nn.Module):
         self.attention = Attention(
             in_channels=config.visual_features+config.question_features,
             out_chanels1=512,
-            out_chanels2=2
+            out_chanels2=config.num_attention_maps
         )
 
         self.classifier = Classifier(

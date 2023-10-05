@@ -53,20 +53,20 @@ class ViVQADataset(Dataset):
         return vecs
 
     def create_visuals_id_to_index(self):
-        visuals = np.load(self.image_features_path)
-        visuals_ids = visuals['ids'][()]
+        if not hasattr(self, 'features_file'):
+            self.features_file = np.load(self.image_features_path)
+        visuals_ids = self.features_file ['ids'][()]
         visuals_id_to_index = {id: i for i, id in enumerate(visuals_ids)}
         return visuals_id_to_index
 
     def load_image(self, image_id):
-        self.features_file = np.load(self.image_features_path)
         index = self.visuals_id_to_index[image_id]
         dataset = self.features_file['features']
         img = dataset[index].astype('float32')
         return torch.from_numpy(img)
 
     def __len__(self):
-        pass
+        return len(self.questions)
 
     def __getitem__(self, idx):
         image_id = self.visuals_ids[idx]

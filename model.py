@@ -4,11 +4,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class ViVQAModel(nn.Module):
-    def __init__(self, vocab_size):
+    def __init__(self):
         super(ViVQAModel, self).__init__()
 
         self.text = TextEncoder(
-            vocab_q_size=vocab_size,
+            vocab_q_size=config.max_vocab_size,
             embedding_dim=config.embedding_dim,
             hidden_size=config.question_features,
             num_layers=1
@@ -64,7 +64,7 @@ class Attention(nn.Module):
 class TextEncoder(nn.Module):
     def __init__(self, vocab_q_size, embedding_dim, hidden_size, num_layers):
         super(TextEncoder, self).__init__()
-        self.embedding = nn.Embedding(vocab_q_size, embedding_dim, padding_idx=0)
+        self.embedding = nn.Embedding(vocab_q_size+1, embedding_dim, padding_idx=0)
         self.tanh = nn.Tanh()
         self.lstm = nn.LSTM(embedding_dim, hidden_size, num_layers, batch_first=True)
 

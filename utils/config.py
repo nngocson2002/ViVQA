@@ -13,3 +13,7 @@ central_fraction = 0.875
 question_features = 1024
 num_attention_maps = 2
 max_answers = 353
+max_vocab_size = 3592
+
+#train
+batch_size = 128

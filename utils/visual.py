@@ -80,7 +80,7 @@ def main():
     vs_encoder = VisualEncoder().to(device)
     loader = create_loader(config.__IMAGES__)
 
-    features_shape = (len(loader.dataset), config.num_features_output, config.output_size, config.output_size)
+    features_shape = (len(loader.dataset), config.visual_features, config.output_size, config.output_size)
     features = np.zeros(shape=features_shape, dtype='float16')
     img_ids = np.zeros(len(loader.dataset), dtype='int32')
 

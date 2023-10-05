@@ -1,7 +1,7 @@
 from collections import Counter
 from underthesea import word_tokenize
 import re
-import config
+from utils import config
 import pandas as pd
 import json
 

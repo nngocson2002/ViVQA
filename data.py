@@ -66,7 +66,7 @@ class ViVQADataset(Dataset):
         return torch.from_numpy(img)
 
     def __len__(self):
-        pass
+        return len(self.questions)
 
     def __getitem__(self, idx):
         image_id = self.visuals_ids[idx]

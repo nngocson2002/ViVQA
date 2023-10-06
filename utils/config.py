@@ -7,7 +7,11 @@ __FEATURES__ = 'data/features.npz'
 embedding_dim = 300
 image_size = 448
 output_size = image_size // 32 # 2^5
+<<<<<<< HEAD
 num_features_output = 2048
+=======
+visual_features = 2048
+>>>>>>> be9c1f31270d8495ae858949dc548f4f2f27cacf
 central_fraction = 0.875
 
 question_features = 1024

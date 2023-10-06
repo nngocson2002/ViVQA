@@ -10,7 +10,11 @@ def main():
     dataset = ViVQADataset(df, config.__FEATURES__)
 
     batch_size = config.batch_size
+<<<<<<< HEAD
     print(type(dataset))
+=======
+
+>>>>>>> be9c1f31270d8495ae858949dc548f4f2f27cacf
     loader = DataLoader(
         dataset,
         batch_size=batch_size,
@@ -23,4 +27,8 @@ def main():
         break
 
 if __name__ == '__main__':
+<<<<<<< HEAD
     main()
+=======
+    main()
+>>>>>>> be9c1f31270d8495ae858949dc548f4f2f27cacf

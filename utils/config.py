@@ -1,7 +1,7 @@
 __DATASET__ = 'data/dataset.csv'
 __VOCAB__ = 'data/vocab.json'
 __IMAGES__ = 'data/images'
-__FEATURES__ = 'data/features.npz'
+__FEATURES__ = 'data/features.hdf5'
 
 
 embedding_dim = 300

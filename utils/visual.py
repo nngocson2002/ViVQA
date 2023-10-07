@@ -10,6 +10,7 @@ import glob
 import torch.nn as nn
 from tqdm import tqdm
 import numpy as np
+import h5py
 
 def get_transforms(target_size, central_fraction=1.0):
     return transforms.Compose([
@@ -81,22 +82,21 @@ def main():
     loader = create_loader(config.__IMAGES__)
 
     features_shape = (len(loader.dataset), config.visual_features, config.output_size, config.output_size)
-    features = np.zeros(shape=features_shape, dtype='float16')
-    img_ids = np.zeros(len(loader.dataset), dtype='int32')
 
-    i = j = 0
-    with torch.no_grad():
-        for ids, imgs in loader:
-            imgs = Variable(imgs.cuda(non_blocking=True))
-            out = vs_encoder(imgs)
+    with h5py.File('features.hdf5', 'w') as f:
+        features = f.create_dataset('features', shape=features_shape, dtype='float16')
+        img_ids = f.create_dataset('ids', shape=(len(loader.dataset),), dtype='int32')
 
-            j = i + imgs.size(0)
-            features[i:j, :, :] = out.data.cpu().numpy().astype('float16')
-            img_ids[i:j] = np.array(ids, dtype='int32')
-            i = j
+        i = j = 0
+        with torch.no_grad():
+            for ids, imgs in loader:
+                imgs = Variable(imgs.cuda(non_blocking=True))
+                out = vs_encoder(imgs)
 
-        np.save(config.__FEATURES__, features=features, ids=img_ids)
+                j = i + imgs.size(0)
+                features[i:j, :, :] = out.data.cpu().numpy().astype('float16')
+                img_ids[i:j] = np.array(ids, dtype='int32')
+                i = j
             
-
 if __name__ == '__main__':
     main()

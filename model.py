@@ -17,11 +17,7 @@ class ViVQAModel(nn.Module):
         self.attention = Attention(
             in_channels=config.visual_features+config.question_features,
             out_chanels1=512,
-<<<<<<< HEAD
-            out_chanels2=2
-=======
             out_chanels2=config.num_attention_maps
->>>>>>> be9c1f31270d8495ae858949dc548f4f2f27cacf
         )
 
         self.classifier = Classifier(
@@ -99,9 +95,5 @@ def tile(q_features, v_features):
     _, _, height, width = v_features.size()
     spatial_size = v_features.dim() - 2
     tiled = q_features.view(batch_size, num_features, *([1]*spatial_size)).expand(batch_size, num_features, height, width)
-<<<<<<< HEAD
-    return tiled
-=======
     return tiled
 
->>>>>>> be9c1f31270d8495ae858949dc548f4f2f27cacf

@@ -96,4 +96,3 @@ def tile(q_features, v_features):
     spatial_size = v_features.dim() - 2
     tiled = q_features.view(batch_size, num_features, *([1]*spatial_size)).expand(batch_size, num_features, height, width)
     return tiled
-

@@ -6,6 +6,7 @@ from underthesea import text_normalize, word_tokenize
 import torch
 import torch.nn as nn
 import numpy as np
+import h5py
 
 class ViVQADataset(Dataset):
     def __init__(self, df, feature_path):
@@ -54,7 +55,7 @@ class ViVQADataset(Dataset):
 
     def create_visuals_id_to_index(self):
         if not hasattr(self, 'features_file'):
-            self.features_file = np.load(self.image_features_path)
+            self.features_file = h5py.File(self.image_features_path, 'r')
         visuals_ids = self.features_file ['ids'][()]
         visuals_id_to_index = {id: i for i, id in enumerate(visuals_ids)}
         return visuals_id_to_index

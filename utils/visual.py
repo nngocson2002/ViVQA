@@ -1,4 +1,4 @@
-from modules.visualEncoder import ResnetEncoder
+from modules.visualEncoder import ResnetExtractor
 import torch
 import config
 import torchvision.transforms as transforms
@@ -86,5 +86,5 @@ def extract_features(vs_encoder):
                 i = j
             
 if __name__ == '__main__':
-    vs_encoder = ResnetEncoder()
+    vs_encoder = ResnetExtractor()
     extract_features(vs_encoder)

@@ -1,9 +1,9 @@
 import torch.nn as nn
 from torchvision.models import resnet152
 
-class ResnetEncoder(nn.Module):
+class ResnetExtractor(nn.Module):
     def __init__(self):
-        super(ResnetEncoder, self).__init__()
+        super(ResnetExtractor, self).__init__()
         self.model = resnet152()
 
         def save_output(module, input, output):

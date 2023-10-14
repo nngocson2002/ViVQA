@@ -2,56 +2,44 @@ from torch.utils.data import Dataset
 from utils import config
 from utils.vocab import preprocess_questions, preprocess_answers
 import json
-from underthesea import text_normalize, word_tokenize
 import torch
-import torch.nn as nn
-import numpy as np
 import h5py
+from transformers import AutoTokenizer
+
+tokenizer = AutoTokenizer.from_pretrained("vinai/phobert-base-v2", use_fast=False)
 
 class ViVQADataset(Dataset):
-    def __init__(self, df, feature_path):
+    def __init__(self, df, image_features_path):
         with open(config.__VOCAB__, 'r') as f:
             vocab = json.loads(f.read())
 
-        self.vocab_q = vocab['question']
         self.vocab_a = vocab['answer']
         self.dataset = df
 
         # q and a
-        self.questions = self.encode_questions(preprocess_questions(df), self.vocab_q)
-        self.answers = self.encode_answers(preprocess_answers(df), self.vocab_a)
+        self.questions = [self.question2ids(question) for question in preprocess_questions(df)]
+        self.answers = self.answers2idx(preprocess_answers(df), self.vocab_a)
         
         # v 
-        self.image_features_path = feature_path
+        self.image_features_path = image_features_path
         self.visuals_id_to_index = self.create_visuals_id_to_index()
         self.visuals_ids = self.dataset['img_id']
-        
-    def max_question_len(self, questions):
-        return max([len(word_tokenize(question)) for question in questions])
 
-    def encode_questions(self, questions, vocab_q):
-        max_len = self.max_question_len(questions)
-        vecs = []
-        for question in questions:
-            words = word_tokenize(question)
-            vec = torch.zeros(max_len, dtype=torch.long)
-            for i, word in enumerate(words):
-                idx = vocab_q.get(word, 0)
-                vec[i] = idx
-            vecs.append(vec)
-        return vecs
-    
-    def encode_answers(self, answers, vocab_a):
-        max_len = len(vocab_a)
-        vecs = []
-        for answer in answers:
-            vec = torch.zeros(max_len)
-            idx = vocab_a.get(answer)
-            if idx is not None:
-                vec[idx] = 1
-                vecs.append(vec)
-                continue
-        return vecs
+    def question2ids(self, question, max_len=100):
+        tkz = tokenizer.encode_plus(
+            text=question,
+            padding='max_length',
+            max_length=max_len,
+            truncation=True, 
+            return_tensors='pt', 
+            return_attention_mask=True,
+            return_token_type_ids=False
+        ) 
+        # {'input_ids': tensor, 'attention_mask': tensor}
+        return tkz
+
+    def answers2idx(self, answers, vocab_a):
+        return [vocab_a[answer] for answer in answers]
 
     def create_visuals_id_to_index(self):
         if not hasattr(self, 'features_file'):

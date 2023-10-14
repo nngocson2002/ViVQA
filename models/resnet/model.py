@@ -2,17 +2,13 @@ from utils import config
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from modules.textEncoder import PhoBertExtractor
 
 class ViVQAModel(nn.Module):
     def __init__(self):
         super(ViVQAModel, self).__init__()
 
-        self.text = TextEncoder(
-            vocab_q_size=config.max_vocab_size,
-            embedding_dim=config.embedding_dim,
-            hidden_size=config.question_features,
-            num_layers=1
-        )
+        self.text = PhoBertExtractor()
 
         self.attention = Attention(
             in_channels=config.visual_features+config.question_features,
@@ -27,7 +23,7 @@ class ViVQAModel(nn.Module):
         )
 
     def forward(self, v, q):
-        q = self.text(q) # (b, hidden_size)
+        q = self.text(q['input_ids'].squeeze(dim=1), q['attention_mask'].squeeze(dim=1))
         v = v/(v.norm(p=2, dim=1, keepdim=True).expand_as(v) + 1e-8) # Normalize
         v = self.attention(v, q) # (b, out2 * c)
         concat = torch.cat([v, q], dim=1)
@@ -60,19 +56,6 @@ class Attention(nn.Module):
         weighted_average = compute_weighted_average(v, attn_weighted)
 
         return weighted_average
-    
-class TextEncoder(nn.Module):
-    def __init__(self, vocab_q_size, embedding_dim, hidden_size, num_layers):
-        super(TextEncoder, self).__init__()
-        self.embedding = nn.Embedding(vocab_q_size+1, embedding_dim, padding_idx=0)
-        self.tanh = nn.Tanh()
-        self.lstm = nn.LSTM(embedding_dim, hidden_size, num_layers, batch_first=True)
-
-    def forward(self, question):
-        embedded = self.embedding(question) # (b, embedding_dim)
-        tanhed = self.tanh(embedded) 
-        _, (_, cell) = self.lstm(tanhed) # (b, hidden_size)
-        return cell.squeeze(0)
         
 def compute_attention_weights(conv_result):
     b, c = conv_result.size()[:2]

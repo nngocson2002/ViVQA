@@ -113,21 +113,12 @@ class ViVQATrainer():
 
         print("Training complete!")
 
-def split_dataset(df):
-    train, validation, test = np.split(df.sample(frac=1, random_state=42), [int(.7*len(df)), int(.8*len(df))])
-
-    train.reset_index(drop=True, inplace=True)
-    validation.reset_index(drop=True, inplace=True)
-    test.reset_index(drop=True, inplace=True)
-
-    return train, validation, test
-
-def create_loader(df):
-    df_train, df_val, df_test = split_dataset(df)
+def create_loader():
+    df_train = pd.read_csv(config.__DATASET_TRAIN__)
+    df_val = pd.read_csv(config.__DATASET_TEST__)
 
     train_dataset = ViVQADataset(df_train, config.__FEATURES__)
     val_dataset = ViVQADataset(df_val, config.__FEATURES__)
-    test_dataset = ViVQADataset(df_test, config.__FEATURES__)
 
     train_loader = DataLoader(
         train_dataset,
@@ -141,32 +132,10 @@ def create_loader(df):
         shuffle=True
     )
 
-    test_loader = DataLoader(
-        test_dataset,
-        batch_size=config.batch_size,
-        shuffle=True
-    )
-
-    return train_loader, val_loader, test_loader
-
-
-
-def test(model, train_loader):
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")    
-    model.eval()
-    total_correct = 0
-    for v, q, a in train_loader:
-        v, q, a = v.to(device), q.to(device), a.to(device)
-        pred = nn.functional.softmax(model(v, q), dim=1)
-        indices = torch.argmax(pred, dim=1)
-        total_correct += a[torch.arange(a.size(0)), indices].sum().item()
-    
-    acc = total_correct/len(train_loader.dataset)
-    return acc
+    return train_loader, val_loader
 
 def main():
-    df = pd.read_csv(config.__DATASET__)
-    train_loader, val_loader, test_loader = create_loader(df)
+    train_loader, val_loader = create_loader()
 
     model = ViVQAModel()
     criterion = nn.CrossEntropyLoss()

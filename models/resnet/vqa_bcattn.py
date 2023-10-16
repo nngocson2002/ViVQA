@@ -2,9 +2,9 @@ import torch.nn as nn
 from utils import config
 from modules.textEncoder import PhoBertExtractor
 
-class BiDirectionalCrossAttetion(nn.Module):
+class BiDirectionalCrossAttention(nn.Module):
     def __init__(self, embed_dim, num_heads, mid_features, dropout=0.0):
-        super(BiDirectionalCrossAttetion, self).__init__()
+        super(BiDirectionalCrossAttention, self).__init__()
 
         self.multihead_attn = nn.MultiheadAttention(embed_dim, num_heads, batch_first=True)
         self.layer_norm = nn.LayerNorm(embed_dim)

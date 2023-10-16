@@ -50,7 +50,7 @@ class ViVQAModel(nn.Module):
 
         self.text = PhoBertExtractor()
 
-        self.cross_attn = BiDirectionalCrossAttetion(
+        self.cross_attn = BiDirectionalCrossAttention(
             embed_dim=config.question_features,
             num_heads=12,
             mid_features=768*2,

@@ -54,7 +54,7 @@ class ViVQATrainer():
         self.model.to(self.device)
 
         best_val_loss = 1000000
-        best_val_acc = 0
+        early_stopping = EarlyStopping(tolerance=5, min_delta=0.1)
 
         for epoch in range(1, self.epochs+1):
             with tqdm(self.train_loader, desc=f'Epoch {epoch}/{self.epochs}', position=0) as pbar:
@@ -100,8 +100,11 @@ class ViVQATrainer():
                 best_val_loss_path = f"{self.save_dir}/model_best_val_loss.pt"
                 self.save_checkpoint(best_val_loss_path)
 
-            if best_val_acc < avg_val_acc:
-                best_val_acc = avg_val_acc
+            early_stopping(avg_val_acc)
+            if early_stopping.early_stop:
+                print("Early stopping at epoch:", epoch)
+                break
+            if early_stopping.best_val_acc < avg_val_acc:
                 best_val_acc_path = f"{self.save_dir}/model_best_val_acc.pt"
                 self.save_checkpoint(best_val_acc_path)
             
@@ -112,6 +115,24 @@ class ViVQATrainer():
                 os.remove(f'{self.save_dir}/model_epoch{epoch-1}.pt')
 
         print("Training complete!")
+
+class EarlyStopping:
+    def __init__(self, tolerance=5, min_delta=0):
+        self.tolerance = tolerance
+        self.min_delta = min_delta
+        self.counter = 0
+        self.early_stop = False
+        self.best_val_acc = 0
+
+    def __call__(self, curr_val_acc):
+        if self.best_val_acc > curr_val_acc:
+            self.best_val_acc = curr_val_acc
+            return
+        
+        if (self.best_val_acc - curr_val_acc) > self.min_delta:
+            self.counter +=1
+            if self.counter >= self.tolerance:  
+                self.early_stop = True
 
 def create_loader():
     df_train = pd.read_csv(config.__DATASET_TRAIN__)
@@ -129,7 +150,7 @@ def create_loader():
     val_loader = DataLoader(
         val_dataset,
         batch_size=config.batch_size,
-        shuffle=True
+        shuffle=False
     )
 
     return train_loader, val_loader

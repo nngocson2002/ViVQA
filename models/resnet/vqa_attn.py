@@ -32,26 +32,29 @@ class ViVQAModel(nn.Module):
         return answer
 
 class Classifier(nn.Sequential):
-    def __init__(self, in_features, mid_features, out_features):
+    def __init__(self, in_features, mid_features, out_features, dropout=0.0):
         super(Classifier, self).__init__()
+        self.add_module('drop1', nn.Dropout(dropout))
         self.add_module('lin1', nn.Linear(in_features, mid_features))
         self.add_module('relu', nn.ReLU())
+        self.add_module('drop2', nn.Dropout(dropout))
         self.add_module('lin2', nn.Linear(mid_features, out_features))
 
 class Attention(nn.Module):
-    def __init__(self, v_features, q_features, mid_features, num_attn_maps):
+    def __init__(self, v_features, q_features, mid_features, num_attn_maps, dropout=0.0):
         super(Attention, self).__init__()
         self.conv1 = nn.Conv2d(v_features, mid_features, 1)
         self.lin1 = nn.Linear(q_features, mid_features)
         self.conv2 = nn.Conv2d(mid_features, num_attn_maps, 1)
         self.relu = nn.ReLU(inplace=True)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, v, q):
-        v = self.conv1(v) # (b, mid_features, 14, 14)
+        v = self.conv1(self.dropout(v)) # (b, mid_features, 14, 14)
         q = self.lin1(q)[:, :, None, None].expand_as(v) # (b, mid_features, 14, 14)
 
         fuse = self.relu(v * q)
-        x = self.conv2(fuse)
+        x = self.conv2(self.dropout(fuse))
 
         attn_weighted = compute_attention_weights(x)
         weighted_average = compute_weighted_average(v, attn_weighted)

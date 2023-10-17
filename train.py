@@ -30,17 +30,17 @@ def main():
         shuffle=True
     )
 
-    loader_vali = DataLoader(
-        dataset_vali,
-        batch_size=batch_size,
-        shuffle=True
-    )
+    # loader_vali = DataLoader(
+    #     dataset_vali,
+    #     batch_size=batch_size,
+    #     shuffle=True
+    # )
 
-    loader_test = DataLoader(
-        dataset_test,
-        batch_size=batch_size,
-        shuffle=True
-    )
+    # loader_test = DataLoader(
+    #     dataset_test,
+    #     batch_size=batch_size,
+    #     shuffle=True
+    # )
 
     print("Train: ")
     for v, q, a in loader_train:
@@ -48,16 +48,16 @@ def main():
         print(pre)
         break
     
-    print("Validation: ")
-    for v, q, a in loader_vali:
-        pre = model(v, q)
-        print(pre)
-        break
+    # print("Validation: ")
+    # for v, q, a in loader_vali:
+    #     pre = model(v, q)
+    #     print(pre)
+    #     break
 
-    print("Test: ")
-    for v, q, a in loader_test:
-        pre = model(v, q)
-        print(pre)
-        break
+    # print("Test: ")
+    # for v, q, a in loader_test:
+    #     pre = model(v, q)
+    #     print(pre)
+    #     break
 if __name__ == '__main__':
     main()

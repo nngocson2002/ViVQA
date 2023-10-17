@@ -11,14 +11,15 @@ class ViVQAModel(nn.Module):
         self.text = PhoBertExtractor()
 
         self.attention = Attention(
-            in_channels=config.visual_features+config.question_features,
-            out_chanels1=512,
-            out_chanels2=config.num_attention_maps
+            v_features=config.visual_features,
+            q_features=config.question_features,
+            mid_features=512,
+            num_attn_maps=config.num_attention_maps
         )
 
         self.classifier = Classifier(
             in_features= config.num_attention_maps*config.visual_features+config.question_features,
-            mid_features=1024,
+            mid_features=512,
             out_features=config.max_answers,
         )
 
@@ -26,33 +27,36 @@ class ViVQAModel(nn.Module):
         q = self.text(q['input_ids'].squeeze(dim=1), q['attention_mask'].squeeze(dim=1))
         v = v/(v.norm(p=2, dim=1, keepdim=True).expand_as(v) + 1e-8) # Normalize
         v = self.attention(v, q) # (b, out2 * c)
-        concat = torch.cat([v, q], dim=1)
+        concat = torch.cat((v, q), dim=1)
         answer = self.classifier(concat)
         return answer
 
 class Classifier(nn.Sequential):
-    def __init__(self, in_features, mid_features, out_features):
+    def __init__(self, in_features, mid_features, out_features, dropout=0.0):
         super(Classifier, self).__init__()
+        self.add_module('drop1', nn.Dropout(dropout))
         self.add_module('lin1', nn.Linear(in_features, mid_features))
         self.add_module('relu', nn.ReLU())
+        self.add_module('drop2', nn.Dropout(dropout))
         self.add_module('lin2', nn.Linear(mid_features, out_features))
 
 class Attention(nn.Module):
-    def __init__(self, in_channels, out_chanels1, out_chanels2):
+    def __init__(self, v_features, q_features, mid_features, num_attn_maps, dropout=0.0):
         super(Attention, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels, out_chanels1, 1)
-        self.conv2 = nn.Conv2d(out_chanels1, out_chanels2, 1)
+        self.conv1 = nn.Conv2d(v_features, mid_features, 1)
+        self.lin1 = nn.Linear(q_features, mid_features)
+        self.conv2 = nn.Conv2d(mid_features, num_attn_maps, 1)
         self.relu = nn.ReLU(inplace=True)
+        self.dropout = nn.Dropout(dropout)
 
     def forward(self, v, q):
-        q_tiled = tile(q, v)
-        concat = torch.cat([v, q_tiled], dim=1)
+        v = self.conv1(self.dropout(v)) # (b, mid_features, 14, 14)
+        q = self.lin1(q)[:, :, None, None].expand_as(v) # (b, mid_features, 14, 14)
 
-        conv1 = self.conv1(concat)
-        relu = self.relu(conv1)
-        conv2 = self.conv2(relu) # (b, out2, h, w)
+        fuse = self.relu(v * q)
+        x = self.conv2(self.dropout(fuse))
 
-        attn_weighted = compute_attention_weights(conv2)
+        attn_weighted = compute_attention_weights(x)
         weighted_average = compute_weighted_average(v, attn_weighted)
 
         return weighted_average

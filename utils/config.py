@@ -1,4 +1,5 @@
-__DATASET__ = 'data/dataset.csv'
+__DATASET_TRAIN__ = 'data/ViVQA-csv/train.csv'
+__DATASET_TEST__ = 'data/ViVQA-csv/test.csv'
 __VOCAB__ = 'data/vocab.json'
 __IMAGES__ = 'data/images'
 __FEATURES__ = 'data/features.hdf5'

@@ -1,4 +1,4 @@
-from torchvision.models import resnet152
+from modules.visualEncoder import ResnetExtractor
 import torch
 import config
 import torchvision.transforms as transforms
@@ -51,19 +51,6 @@ class ViQAImages(Dataset):
 
         return id, img
     
-class VisualEncoder(nn.Module):
-    def __init__(self):
-        super(VisualEncoder, self).__init__()
-        self.model = resnet152()
-
-        def save_output(module, input, output):
-            self.buffer = output
-        self.model.layer4.register_forward_hook(save_output)
-
-    def forward(self, x):
-        self.model(x)
-        return self.buffer
-    
 def create_loader(path):
     transform = get_transforms(config.image_size, config.central_fraction)
     dataset = ViQAImages(path, transform=transform)
@@ -75,10 +62,10 @@ def create_loader(path):
     )
     return loader
     
-def main():
+def extract_features(vs_encoder):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    vs_encoder = VisualEncoder().to(device)
+    vs_encoder = vs_encoder.to(device)
     loader = create_loader(config.__IMAGES__)
 
     features_shape = (len(loader.dataset), config.visual_features, config.output_size, config.output_size)
@@ -99,4 +86,5 @@ def main():
                 i = j
             
 if __name__ == '__main__':
-    main()
+    vs_encoder = ResnetExtractor()
+    extract_features(vs_encoder)

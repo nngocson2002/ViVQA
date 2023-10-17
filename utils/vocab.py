@@ -22,7 +22,7 @@ def process_punctuation(s):
     return s.strip()
 
 def preprocess_questions(df):
-    questions = [question.lower() for question in list(df['question'])]
+    questions = [word_tokenize(question.lower(), format='text') for question in list(df['question'])]
     return questions
 
 def preprocess_answers(df):
@@ -30,27 +30,19 @@ def preprocess_answers(df):
     return answers
 
 
-def extract_vocab(questions, answers):
-    words = [word for question in questions for word in word_tokenize(question)]
-    words = Counter(words).most_common()
+def answer2idx(answers):
     answers = Counter(answers).most_common()
-    vocab_q = {word : i+1 for i, (word,_) in enumerate(words)}
     vocab_a = {answer: i for i, (answer,_) in enumerate(answers)}
-    return vocab_q, vocab_a
+    return vocab_a
 
 if __name__ == '__main__':
 
     df = pd.read_csv(config.__DATASET__)
 
-    questions = preprocess_questions(df)
     answers = preprocess_answers(df)
+    vocab_a = answer2idx(answers)
 
-    vocab_q, vocab_a = extract_vocab(questions, answers)
-
-    vocabs = {
-        'question': vocab_q,
-        'answer': vocab_a,
-    }
+    vocab = {'answer': vocab_a}
 
     with open(config.__VOCAB__, 'w') as f:
-        json.dump(vocabs, f)
+        json.dump(vocab, f)

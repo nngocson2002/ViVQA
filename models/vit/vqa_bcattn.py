@@ -8,18 +8,17 @@ class BiDirectionalCrossAttention(nn.Module):
 
         self.multihead_attn = nn.MultiheadAttention(embed_dim, num_heads, batch_first=True)
         self.layer_norm = nn.LayerNorm(embed_dim)
-        self.linear = nn.Linear(config.question_features*config.output_size*config.output_size, config.question_features)
+        self.linear = nn.Linear(config.visual_features, config.question_features)
         self.fc = nn.Sequential(
             nn.Linear(embed_dim, mid_features),
             nn.ReLU(),
             nn.Linear(mid_features, embed_dim),
             nn.Dropout(dropout)
         )
-        self.flatten = nn.Flatten()
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, v_features, q_features):
-        v_features = self.linear(self.flatten(v_features))
+        v_features = self.linear(v_features)
 
         v_attn_output, _ = self.multihead_attn(query=v_features, key=v_features, value=v_features)
         q_attn_output, _ = self.multihead_attn(query=q_features, key=q_features, value=q_features)

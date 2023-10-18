@@ -1,4 +1,4 @@
-from models.resnet.model import ViVQAModel
+from models.resnet.vqa_bcattn import ViVQAModel
 from data import ViVQADataset
 import torch
 from torch.utils.data import DataLoader
@@ -165,45 +165,5 @@ def main():
     trainer = ViVQATrainer(model, train_loader, val_loader, optimizer, criterion, epochs=50)
     trainer.train()
     
-<<<<<<< HEAD
-
-    batch_size = config.batch_size
-    loader_train = DataLoader(
-        dataset_train,
-        batch_size=batch_size,
-        shuffle=True
-    )
-
-    # loader_vali = DataLoader(
-    #     dataset_vali,
-    #     batch_size=batch_size,
-    #     shuffle=True
-    # )
-
-    # loader_test = DataLoader(
-    #     dataset_test,
-    #     batch_size=batch_size,
-    #     shuffle=True
-    # )
-
-    print("Train: ")
-    for v, q, a in loader_train:
-        pre = model(v, q)
-        print(pre)
-        break
-    
-    # print("Validation: ")
-    # for v, q, a in loader_vali:
-    #     pre = model(v, q)
-    #     print(pre)
-    #     break
-
-    # print("Test: ")
-    # for v, q, a in loader_test:
-    #     pre = model(v, q)
-    #     print(pre)
-    #     break
-=======
->>>>>>> 14b5888978a9242f1894cd165aada868790061ea
 if __name__ == '__main__':
     main()

@@ -30,7 +30,7 @@ def extract_features(vs_encoder, model_name):
                 out = vs_encoder(*imgs)
                 
             k = j + len(paths)
-            features[j:k, :] = out.cpu().numpy().astype('float16')
+            features[j:k] = out.cpu().numpy().astype('float16')
             img_ids[j:k] = np.array(ids, dtype='int32')
             j = k
             

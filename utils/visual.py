@@ -1,3 +1,6 @@
+import sys
+sys.path.append('D:/Seminar/code/ViVQA/')
+
 from modules.visualEncoder import ResnetExtractor
 import torch
 import config
@@ -48,8 +51,7 @@ class ViQAImages(Dataset):
 
         if self.transform is not None:
             img = self.transform(img)
-
-        return id, img
+        return id, np.array(img)
     
 def create_loader(path):
     transform = get_transforms(config.image_size, config.central_fraction)

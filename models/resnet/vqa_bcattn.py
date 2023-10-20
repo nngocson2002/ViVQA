@@ -19,7 +19,9 @@ class BiDirectionalCrossAttention(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, v_features, q_features):
-        v_features = self.linear(self.flatten(v_features))
+        v_features = self.linear(self.flatten(v_features)) 
+        # (b, 2048, 14, 14) -> (b, 2048 * 14 * 14) @ (2048 * 14 * 14, 768) -> (b, 768)
+        # (b, 768)
 
         v_attn_output, _ = self.multihead_attn(query=v_features, key=v_features, value=v_features)
         q_attn_output, _ = self.multihead_attn(query=q_features, key=q_features, value=q_features)
@@ -50,12 +52,16 @@ class ViVQAModel(nn.Module):
 
         self.text = PhoBertExtractor()
 
-        self.cross_attn = BiDirectionalCrossAttention(
-            embed_dim=config.question_features,
-            num_heads=12,
-            mid_features=768*2,
-            dropout=0.1
-        )
+        self.num_cross_attention_layers = 2
+
+        self.cross_attn_layers = nn.ModuleList([
+            BiDirectionalCrossAttention(
+                embed_dim=config.question_features,
+                num_heads=12,
+                mid_features=768 * 2,
+                dropout=0.1
+            ) for _ in range(self.num_cross_attention_layers)
+        ])
 
         self.classifier = Classifier(
             in_features=config.question_features,
@@ -67,7 +73,10 @@ class ViVQAModel(nn.Module):
     def forward(self, v, q):
         q = self.text(q['input_ids'].squeeze(dim=1), q['attention_mask'].squeeze(dim=1))
         v = v/(v.norm(p=2, dim=1, keepdim=True).expand_as(v) + 1e-8) # Normalize
-        v, q = self.cross_attn(v, q)
+        
+        for cross_attn in self.cross_attn_layers:
+            v, q = cross_attn(v, q) 
+ 
         x = v * q
         answer = self.classifier(x)
         return answer

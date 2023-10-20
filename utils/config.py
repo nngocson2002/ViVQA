@@ -2,19 +2,27 @@ __DATASET_TRAIN__ = 'data/ViVQA-csv/train.csv'
 __DATASET_TEST__ = 'data/ViVQA-csv/test.csv'
 __VOCAB__ = 'data/vocab.json'
 __IMAGES__ = 'data/images'
-__FEATURES__ = 'data/resnet.hdf5'
 
+VISUAL_MODEL = {
 
-embedding_dim = 768
-image_size = 448
-output_size = image_size // 32 # 2^5
-visual_features = 2048
-central_fraction = 0.875
+    'CLIP-ViT': {
+        'visual_features': 512,
+        'feature_shape': (512,),
+        'path': 'data/clip-vit.hdf5'
+    },
 
-question_features = 768
-num_attention_maps = 2
+    'Resnet152': {
+        'visual_features': 2048,
+        'feature_shape': (2048, 14, 14), # target_size = 448 / 2^5 = 14
+        'path': 'data/resnet152.hdf5'
+    }
+}
+
+TEXT_MODEL = {
+    'PhoBert': {
+        'text_features': 768
+    }
+}
+
 max_answers = 353
-max_vocab_size = 3592
-
-#train
 batch_size = 128

@@ -1,26 +1,31 @@
-from utils import config
-import torch
+import sys
+sys.path.append('./')
 import torch.nn as nn
+import torch
+from utils import config
 import torch.nn.functional as F
-from modules.textEncoder import PhoBertExtractor
+from modules.TextEncoder import PhoBertExtractor
+import torch.nn as nn
 
 class ViVQAModel(nn.Module):
-    def __init__(self):
+    def __init__(self, v_features, q_features, num_attn_maps, mid_features, num_classes, dropout=0.0):
         super(ViVQAModel, self).__init__()
 
         self.text = PhoBertExtractor()
 
         self.attention = Attention(
-            v_features=config.visual_features,
-            q_features=config.question_features,
-            mid_features=512,
-            num_attn_maps=config.num_attention_maps
+            v_features=v_features,
+            q_features=q_features,
+            mid_features=mid_features, # 512
+            num_attn_maps=num_attn_maps,
+            dropout=dropout
         )
 
         self.classifier = Classifier(
-            in_features= config.num_attention_maps*config.visual_features+config.question_features,
-            mid_features=512,
-            out_features=config.max_answers,
+            in_features=num_attn_maps*mid_features+q_features,
+            mid_features=mid_features,
+            out_features=num_classes,
+            dropout=dropout
         )
 
     def forward(self, v, q):
@@ -46,7 +51,7 @@ class Attention(nn.Module):
         self.conv1 = nn.Conv2d(v_features, mid_features, 1)
         self.lin1 = nn.Linear(q_features, mid_features)
         self.conv2 = nn.Conv2d(mid_features, num_attn_maps, 1)
-        self.relu = nn.ReLU(inplace=True)
+        self.relu = nn.ReLU()
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, v, q):
@@ -54,7 +59,7 @@ class Attention(nn.Module):
         q = self.lin1(q)[:, :, None, None].expand_as(v) # (b, mid_features, 14, 14)
 
         fuse = self.relu(v * q)
-        x = self.conv2(self.dropout(fuse))
+        x = self.conv2(self.dropout(fuse)) # (b, num_attn_maps, 14, 14)
 
         attn_weighted = compute_attention_weights(x)
         weighted_average = compute_weighted_average(v, attn_weighted)
@@ -62,24 +67,25 @@ class Attention(nn.Module):
         return weighted_average
         
 def compute_attention_weights(conv_result):
-    b, c = conv_result.size()[:2]
-    flattened = conv_result.view(b, c, -1).unsqueeze(2) # (b, out2, 1, h*w)
+    b, c = conv_result.size()[:2] # c = num_attn_maps
+    flattened = conv_result.view(b, c, -1).unsqueeze(2) # (b, num_attn_maps, 1, h*w)
     attn_weighted = F.softmax(flattened, dim=-1)
-    return attn_weighted # (b, out2, 1, h*w)
+    return attn_weighted # (b, num_attn_maps, 1, h*w)
         
 def compute_weighted_average(v, attn_weighted):
     b, c = v.size()[:2]
     flattened = v.view(b, 1, c, -1) # (b, 1, c, h*w)
-    features_glimpse = attn_weighted * flattened # (b, out2, c, h*w)
-    weighted_average = features_glimpse.sum(dim=-1) # (b, out2, c, 1)
-    return weighted_average.view(b, -1) # concat out2 glimpse => (b, out2 * c)
+    features_glimpse = attn_weighted * flattened # (b, num_attn_maps, c, h*w)
+    weighted_average = features_glimpse.sum(dim=-1) # (b, num_attn_maps, c, 1)
+    return weighted_average.view(b, -1) # concat out2 glimpse => (b, num_attn_maps * c) 2*512
 
-# (batch_size, hidden_size)
-# (batch_size, num_features, output_size, output_size)
-
-def tile(q_features, v_features):
-    batch_size, num_features = q_features.size()
-    _, _, height, width = v_features.size()
-    spatial_size = v_features.dim() - 2
-    tiled = q_features.view(batch_size, num_features, *([1]*spatial_size)).expand(batch_size, num_features, height, width)
-    return tiled
+if __name__ == '__main__':
+    # ????    
+    model = ViVQAModel(
+        v_features=config.VISUAL_MODEL['Resnet152']['visual_features'],
+        q_features=config.TEXT_MODEL['PhoBert']['text_features'], 
+        num_attn_maps=2, 
+        mid_features=config.TEXT_MODEL['PhoBert']['text_features'], 
+        num_classes=config.max_answers, 
+        dropout=0.3
+    )

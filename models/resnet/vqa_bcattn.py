@@ -63,7 +63,7 @@ class ViVQAModel(nn.Module):
 
         self.classifier = Classifier(
             in_features=q_features,
-            mid_features=mid_features,
+            mid_features=512,
             out_features=num_classes,
             dropout=dropout
         )

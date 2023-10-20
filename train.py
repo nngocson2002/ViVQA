@@ -1,4 +1,4 @@
-from models.resnet.model import ViVQAModel
+from models.resnet.vqa_bcattn import ViVQAModel
 from data import ViVQADataset
 import torch
 from torch.utils.data import DataLoader

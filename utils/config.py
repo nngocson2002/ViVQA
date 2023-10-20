@@ -2,7 +2,7 @@ __DATASET_TRAIN__ = 'data/ViVQA-csv/train.csv'
 __DATASET_TEST__ = 'data/ViVQA-csv/test.csv'
 __VOCAB__ = 'data/vocab.json'
 __IMAGES__ = 'data/images'
-__FEATURES__ = 'data/features.hdf5'
+__FEATURES__ = 'data/resnet.hdf5'
 
 
 embedding_dim = 768

@@ -1,4 +1,4 @@
-from models.resnet.model import ViVQAModel
+from models.vit.vqa_bcattn import ViVQAModel
 from data import ViVQADataset
 import torch
 from torch.utils.data import DataLoader
@@ -134,12 +134,12 @@ class EarlyStopping:
             if self.counter >= self.tolerance:  
                 self.early_stop = True
 
-def create_loader():
+def create_loader(feature_path):
     df_train = pd.read_csv(config.__DATASET_TRAIN__)
     df_val = pd.read_csv(config.__DATASET_TEST__)
 
-    train_dataset = ViVQADataset(df_train, config.__FEATURES__)
-    val_dataset = ViVQADataset(df_val, config.__FEATURES__)
+    train_dataset = ViVQADataset(df_train, feature_path)
+    val_dataset = ViVQADataset(df_val, feature_path)
 
     train_loader = DataLoader(
         train_dataset,
@@ -156,11 +156,21 @@ def create_loader():
     return train_loader, val_loader
 
 def main():
-    train_loader, val_loader = create_loader()
+    train_loader, val_loader = create_loader(config.VISUAL_MODEL['CLIP-ViT']['path'])
+    # train_loader, val_loader = create_loader(config.VISUAL_MODEL['Resnet152']['path'])
 
-    model = ViVQAModel()
+    model = ViVQAModel(
+        v_features=config.VISUAL_MODEL['CLIP-ViT']['visual_features'],
+        q_features=config.TEXT_MODEL['PhoBert']['text_features'], 
+        num_heads=12, 
+        mid_features=config.TEXT_MODEL['PhoBert']['text_features']*2, 
+        num_classes=config.max_answers, 
+        num_cross_attn_layers=1, 
+        dropout=0.3
+    )
+
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.003)
+    optimizer = optim.Adam(model.parameters(), lr=0.0003)
 
     trainer = ViVQATrainer(model, train_loader, val_loader, optimizer, criterion, epochs=50)
     trainer.train()

@@ -7,7 +7,8 @@ import torch
 class ResnetExtractor(nn.Module):
     def __init__(self):
         super(ResnetExtractor, self).__init__()
-        self.model = resnet152()
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.model = resnet152(pretrained=True) 
         self.transform = self.get_transforms(target_size=448, central_fraction=0.875)
 
         def save_output(module, input, output):

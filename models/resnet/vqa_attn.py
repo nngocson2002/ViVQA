@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch
 from utils import config
 import torch.nn.functional as F
-from modules.TextEncoder import PhoBertExtractor
+from modules.textEncoder import PhoBertExtractor
 import torch.nn as nn
 
 class ViVQAModel(nn.Module):

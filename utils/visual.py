@@ -1,6 +1,6 @@
 import sys
 sys.path.append('./')
-from modules.VisualEncoder import ViTExtractor, ResnetExtractor
+from modules.visualEncoder import ViTExtractor, ResnetExtractor
 import torch
 import config
 import torchvision.transforms as transforms
@@ -35,6 +35,6 @@ def extract_features(vs_encoder, model_name):
             j = k
             
 if __name__ == '__main__':
-    vs_encoder = ResnetExtractor()
-    # vs_encoder = ViTExtractor()
+    #vs_encoder = ResnetExtractor()
+    vs_encoder = ViTExtractor()
     extract_features(vs_encoder, model_name=vs_encoder.model_name)

@@ -125,7 +125,7 @@ class EarlyStopping:
         self.best_val_acc = 0
 
     def __call__(self, curr_val_acc):
-        if self.best_val_acc > curr_val_acc:
+        if self.best_val_acc < curr_val_acc:
             self.best_val_acc = curr_val_acc
             return
         

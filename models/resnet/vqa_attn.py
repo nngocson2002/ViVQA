@@ -5,7 +5,6 @@ import torch
 from utils import config
 import torch.nn.functional as F
 from modules.TextEncoder import PhoBertExtractor
-import torch.nn as nn
 
 class ViVQAModel(nn.Module):
     def __init__(self, v_features, q_features, num_attn_maps, mid_features, num_classes, dropout=0.0):

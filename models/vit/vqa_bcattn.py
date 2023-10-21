@@ -3,7 +3,6 @@ sys.path.append('./')
 import torch.nn as nn
 from utils import config
 from modules.TextEncoder import PhoBertExtractor
-import torch.nn as nn
 
 class ViVQAModel(nn.Module):
     def __init__(self, v_features, q_features, num_heads, mid_features, num_classes, num_cross_attn_layers=1, dropout=0.0):

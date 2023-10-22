@@ -54,6 +54,7 @@ class ViVQATrainer():
         self.model.to(self.device)
 
         best_val_loss = 1000000
+        best_val_acc = 0
         early_stopping = EarlyStopping(tolerance=5, min_delta=0.1)
 
         for epoch in range(1, self.epochs+1):
@@ -104,7 +105,8 @@ class ViVQATrainer():
             if early_stopping.early_stop:
                 print("Early stopping at epoch:", epoch)
                 break
-            if early_stopping.best_val_acc < avg_val_acc:
+            if best_val_acc < avg_val_acc:
+                best_val_acc = avg_val_acc
                 best_val_acc_path = f"{self.save_dir}/model_best_val_acc.pt"
                 self.save_checkpoint(best_val_acc_path)
             
@@ -122,14 +124,9 @@ class EarlyStopping:
         self.min_delta = min_delta
         self.counter = 0
         self.early_stop = False
-        self.best_val_acc = 0
 
-    def __call__(self, curr_val_acc):
-        if self.best_val_acc < curr_val_acc:
-            self.best_val_acc = curr_val_acc
-            return
-        
-        if (self.best_val_acc - curr_val_acc) > self.min_delta:
+    def __call__(self, best_val_acc, curr_val_acc):        
+        if (best_val_acc - curr_val_acc) > self.min_delta:
             self.counter +=1
             if self.counter >= self.tolerance:  
                 self.early_stop = True

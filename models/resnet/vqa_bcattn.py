@@ -9,7 +9,6 @@ class BiDirectionalCrossAttention(nn.Module):
 
         self.multihead_attn = nn.MultiheadAttention(embed_dim, num_heads, batch_first=True)
         self.layer_norm = nn.LayerNorm(embed_dim)
-        self.linear = nn.Linear(config.question_features*config.output_size*config.output_size, config.question_features)
         self.fc = nn.Sequential(
             nn.Linear(embed_dim, mid_features),
             nn.ReLU(),
@@ -48,8 +47,8 @@ class ViVQAModel(nn.Module):
         super(ViVQAModel, self).__init__()
 
         self.text = PhoBertExtractor()
-        self.linear = nn.Linear(np.prod(config.VISUAL_MODEL['Resnet152']['feature_shape']), q_features)
         self.flatten = nn.Flatten()
+        self.linear = nn.Linear(np.prod(config.VISUAL_MODEL['Resnet152']['feature_shape']), q_features)
         self.num_cross_attention_layers = num_cross_attn_layers
 
         self.cross_attn_layers = nn.ModuleList([

@@ -1,6 +1,6 @@
 import sys
 sys.path.append('./')
-from modules.VisualEncoder import ViTExtractor, ResnetExtractor
+from modules.VisualEncoder import ClipViTExtractor, ResnetExtractor, Blip2ViTExtractor
 import torch
 import config
 from torch.utils.data import DataLoader
@@ -36,4 +36,5 @@ def extract_features(vs_encoder, model_name):
 if __name__ == '__main__':
     vs_encoder = ResnetExtractor()
     # vs_encoder = ViTExtractor()
+    # vs_encoder = Blip2ViTExtractor()
     extract_features(vs_encoder, model_name=vs_encoder.model_name)

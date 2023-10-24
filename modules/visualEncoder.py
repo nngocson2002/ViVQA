@@ -2,6 +2,7 @@ import torch.nn as nn
 from torchvision.models import resnet152
 import torchvision.transforms as transforms
 import clip
+from lavis.models import load_model_and_preprocess
 import torch
 
 class ResnetExtractor(nn.Module):
@@ -30,10 +31,9 @@ class ResnetExtractor(nn.Module):
         self.model(images_transformed)
         return self.buffer
 
-
-class ViTExtractor(nn.Module):
+class ClipViTExtractor(nn.Module):
     def __init__(self):
-        super(ViTExtractor,self).__init__()
+        super(ClipViTExtractor,self).__init__()
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model, self.preprocess = clip.load('ViT-B/32', self.device)
         self.model_name = 'CLIP-ViT'
@@ -41,4 +41,16 @@ class ViTExtractor(nn.Module):
     def forward(self, *images):
         images = torch.stack([self.preprocess(image).to(self.device) for image in images])
         image_features = self.model.encode_image(images)
+        return image_features
+    
+class Blip2ViTExtractor(nn.Module):
+    def __init__(self):
+        super(Blip2ViTExtractor, self).__init__()
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.model, self.preprocess, _ = load_model_and_preprocess(name="blip2_feature_extractor", model_type="pretrain", is_eval=True, device=self.device)
+        self.preprocess = self.preprocess["eval"]
+        self.model_name = "Blip2-ViT"
+    def forward(self, *images):
+        images = torch.stack([self.preprocess(image.convert("RGB")).to(self.device) for image in images])
+        image_features = self.model.extract_features(samples={"image": images}, mode="image").image_embeds_proj[:,0,:]
         return image_features

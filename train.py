@@ -1,4 +1,4 @@
-from models.vit.vqa_bcattn import ViVQAModel
+from models.clip_vit.vqa_bcattn import ViVQAModel
 from data import ViVQADataset
 import torch
 from torch.utils.data import DataLoader
@@ -32,8 +32,8 @@ class ViVQATrainer():
                 print(f'No checkpoints found in: {self.save_dir}')
                 print(f'Training new model, save to: {self.save_dir}')
             else:
-                self.load_check_point(checkpoint_path)
-                print(f'Restore weight successful from: {checkpoint_path}')
+                self.load_check_point(checkpoint_path[0])
+                print(f'Restore weight successful from: {checkpoint_path[0]}')
         else:
             self.save_dir = datetime.now().strftime('%d-%m-%Y_%H-%M-%S')
             os.makedirs(self.save_dir)

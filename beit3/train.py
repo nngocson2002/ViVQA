@@ -12,6 +12,8 @@ import os
 import glob
 from datetime import datetime
 from transformers import get_cosine_schedule_with_warmup
+import beit3_vivqa
+from timm.models import create_model
 import torchmetrics
 
 class ViVQATrainer():
@@ -72,10 +74,12 @@ class ViVQATrainer():
 
                 self.model.train()
                 train_losses = []
-                for v, q, a in pbar:   
+                for v, q, a in pbar:
+                    v = v['blip'] * v['resnet']   
                     v, q, a = v.to(self.device), q.to(self.device), a.to(self.device)
+
                     self.optimizer.zero_grad()
-                    pred = self.model(v, q)
+                    pred = self.model(v, q['input_ids'].squeeze(dim=1), q['attention_mask'].squeeze(dim=1))
                     loss = self.criterion(pred, a)
                     loss.backward()
                     self.optimizer.step()
@@ -92,12 +96,14 @@ class ViVQATrainer():
                 accuracy.reset()
                 f1_score.reset()
 
+
                 self.model.eval()
                 val_losses = []
                 with torch.no_grad():
                     for v, q, a in self.val_loader:
+                        v = v['blip'] * v['resnet']
                         v, q, a = v.to(self.device), q.to(self.device), a.to(self.device)
-                        pred = self.model(v, q)
+                        pred = self.model(v, q['input_ids'].squeeze(dim=1), q['attention_mask'].squeeze(dim=1))
                         loss = self.criterion(pred, a)
 
                         val_losses.append(loss.item())
@@ -152,41 +158,35 @@ def create_loader(feature_path):
     df_train = pd.read_csv(config.__DATASET_TRAIN__)
     df_val = pd.read_csv(config.__DATASET_TEST__)
 
-    train_dataset = ViVQADataset(df_train, feature_path)
-    val_dataset = ViVQADataset(df_val, feature_path)
+    train_dataset = ViVQADataset(df_train, *feature_path)
+    val_dataset = ViVQADataset(df_val, *feature_path)
 
     train_loader = DataLoader(
         train_dataset,
-        batch_size=config.batch_size,
+        batch_size=32,
         shuffle=True
     )
 
     val_loader = DataLoader(
         val_dataset,
-        batch_size=config.batch_size,
+        batch_size=32,
         shuffle=False
     )
 
     return train_loader, val_loader
 
 def main():
-    train_loader, val_loader = create_loader(config.VISUAL_MODEL['CLIP-ViT']['path'])
-    # train_loader, val_loader = create_loader(config.VISUAL_MODEL['Resnet152']['path'])
+    feature_paths = [config.VISUAL_MODEL['Blip2-ViT']['path'], 
+                     config.VISUAL_MODEL['Resnet152']['path']]
+    
+    train_loader, val_loader = create_loader(*feature_paths)
 
-    model = ViVQAModel(
-        v_features=config.VISUAL_MODEL['CLIP-ViT']['visual_features'],
-        q_features=config.TEXT_MODEL['PhoBert']['text_features'], 
-        num_heads=12, 
-        mid_features=config.TEXT_MODEL['PhoBert']['text_features']*2, 
-        num_classes=config.max_answers, 
-        num_cross_attn_layers=1, 
-        dropout=0.3
-    )
+    model = create_model('beit3_blip2_vivqa', pretrained = False, drop_path_rate=0.5)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.0003)
+    optimizer = optim.AdamW(model.parameters(), lr=3e-5, eps=1e-8)
 
-    trainer = ViVQATrainer(model, train_loader, val_loader, optimizer, criterion, epochs=50)
+    trainer = ViVQATrainer(model, train_loader, val_loader, optimizer, criterion, epochs=30)
     trainer.train()
     
 if __name__ == '__main__':

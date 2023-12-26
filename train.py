@@ -11,6 +11,8 @@ import torch.optim as optim
 import os
 import glob
 from datetime import datetime
+from transformers import get_cosine_schedule_with_warmup
+import torchmetrics
 
 class ViVQATrainer():
     def __init__(self, model, train_loader, val_loader, optimizer, criterion, epochs, save_dir=None):
@@ -22,6 +24,11 @@ class ViVQATrainer():
         self.optimizer = optimizer
         self.criterion = criterion
         self.epochs = epochs
+        self.scheduler = get_cosine_schedule_with_warmup(
+            optimizer=optimizer,
+            num_warmup_steps=len(train_loader) * int(self.epochs * 0.1),
+            num_training_steps=len(train_loader) * self.epochs
+        )
 
         if save_dir is not None and os.path.exists(save_dir):
             print(f"Load weight from file:{save_dir}")
@@ -53,6 +60,9 @@ class ViVQATrainer():
     def train(self):
         self.model.to(self.device)
 
+        accuracy = torchmetrics.classification.Accuracy(task="multiclass", num_classes=config.max_answers).to(self.device)
+        f1_score = torchmetrics.classification.F1Score(task='multiclass', num_classes=config.max_answers).to(self.device)
+
         best_val_loss = 1000000
         best_val_acc = 0
         early_stopping = EarlyStopping(tolerance=5, min_delta=0.1)
@@ -62,7 +72,6 @@ class ViVQATrainer():
 
                 self.model.train()
                 train_losses = []
-                total_correct = 0
                 for v, q, a in pbar:   
                     v, q, a = v.to(self.device), q.to(self.device), a.to(self.device)
                     self.optimizer.zero_grad()
@@ -70,17 +79,21 @@ class ViVQATrainer():
                     loss = self.criterion(pred, a)
                     loss.backward()
                     self.optimizer.step()
+                    self.scheduler.step()
 
                     train_losses.append(loss.item())
-                    indices = torch.argmax(pred, dim=1)
-                    total_correct += (a == indices).sum().item()
+                    train_acc = accuracy(pred.argmax(dim=1), a)
+                    train_f1_score = f1_score(pred.argmax(dim=1), a)
 
                 avg_train_loss = np.mean(train_losses)
-                avg_train_acc = total_correct/len(self.train_loader.dataset)
+                train_acc = accuracy.compute()
+                train_f1_score = f1_score.compute()
+
+                accuracy.reset()
+                f1_score.reset()
 
                 self.model.eval()
                 val_losses = []
-                total_correct = 0
                 with torch.no_grad():
                     for v, q, a in self.val_loader:
                         v, q, a = v.to(self.device), q.to(self.device), a.to(self.device)
@@ -88,25 +101,29 @@ class ViVQATrainer():
                         loss = self.criterion(pred, a)
 
                         val_losses.append(loss.item())
-                        indices = torch.argmax(pred, dim=1)
-                        total_correct += (a == indices).sum().item()
+                        val_acc = accuracy(pred.argmax(dim=1), a)
+                        val_f1_score = f1_score(pred.argmax(dim=1), a)
 
                 avg_val_loss = np.mean(val_losses)
-                avg_val_acc = total_correct/len(self.val_loader.dataset)
+                val_acc = accuracy.compute()
+                val_f1_score = f1_score.compute()
 
-            print(f'train_loss={avg_train_loss:.2f}, train_accuracy={avg_train_acc*100:.2f}%, val_loss={avg_val_loss:.2f}, val_accuracy={avg_val_acc*100:.2f}%')
+                accuracy.reset()
+                f1_score.reset()
+
+            print(f'train_loss={avg_train_loss:.2f}, train_accuracy={train_acc*100:.2f}%, train_f1={train_f1_score*100:.2f}%, val_loss={avg_val_loss:.2f}, val_accuracy={val_acc*100:.2f}%, val_f1={val_f1_score*100:.2f}%')
 
             if best_val_loss > avg_val_loss:
                 best_val_loss = avg_val_loss
                 best_val_loss_path = f"{self.save_dir}/model_best_val_loss.pt"
                 self.save_checkpoint(best_val_loss_path)
 
-            early_stopping(avg_val_acc)
+            early_stopping(best_val_acc, val_acc)
             if early_stopping.early_stop:
                 print("Early stopping at epoch:", epoch)
                 break
-            if best_val_acc < avg_val_acc:
-                best_val_acc = avg_val_acc
+            if best_val_acc < val_acc:
+                best_val_acc = val_acc
                 best_val_acc_path = f"{self.save_dir}/model_best_val_acc.pt"
                 self.save_checkpoint(best_val_acc_path)
             

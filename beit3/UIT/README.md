@@ -1,5 +1,5 @@
 # Descriptions
-```bash
+```
 usage: main.py [-h] [--output-dir OUTPUT_DIR]
                [--log-level {debug,info,warning,error,critical,passive}]
                [--lr-scheduler-type {cosine,linear}] [--warmup-ratio WARMUP_RATIO]
@@ -32,6 +32,11 @@ options:
   --classes CLASSES
 ```
 # Example
+Change directory.
+```bash
+cd beit3/UIT
+```
+Run training.
 ```bash
 python main.py --log-level 'info'\
                --image-path './data/images' \

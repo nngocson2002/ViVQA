@@ -1,35 +1,33 @@
 from timm.models.registry import register_model
 from timm.models.layers import trunc_normal_ as __call_trunc_normal_
-from torchscale.model.BEiT3 import BEiT3
+from torchscale.component.multiway_network import MutliwayEmbedding
+from torchscale.component.embedding import PositionalEmbedding
+from torchscale.architecture.encoder import Encoder
 from torchscale.architecture.config import EncoderConfig
-from TextEmbedding import BartPhoExtractor
-from transformers.utils.generic import ModelOutput
-from dataclasses import dataclass
-from typing import Optional
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
 import math
-
-def trunc_normal_(tensor, mean=0., std=1.):
-    __call_trunc_normal_(tensor, mean=mean, std=std, a=-std, b=std)
-
-def _get_base_config(
-        img_size=224, patch_size=16, drop_path_rate=0, 
-        checkpoint_activations=None, mlp_ratio=4, vocab_size=64010, **kwargs
-):
-    return EncoderConfig(
-        img_size=img_size, patch_size=patch_size, vocab_size=vocab_size, multiway=True, 
-        layernorm_embedding=False, normalize_output=True, no_output_layer=True, 
-        drop_path_rate=drop_path_rate, encoder_embed_dim=768, encoder_attention_heads=12, 
-        encoder_ffn_embed_dim=int(768 * mlp_ratio), encoder_layers=12, 
-        checkpoint_activations=checkpoint_activations, 
-    )
+from transformers.utils.generic import ModelOutput
+from dataclasses import dataclass
+from typing import Optional
+from TextEmbedding import BartPhoExtractor
 
 @dataclass
 class ViVQAOutput(ModelOutput):
     loss: Optional[torch.FloatTensor] = None
     logits: torch.FloatTensor = None
+
+def trunc_normal_(tensor, mean=0., std=1.):
+    __call_trunc_normal_(tensor, mean=mean, std=std, a=-std, b=std)
+
+def _get_base_config(drop_path_rate=0, mlp_ratio=4, encoder_layers=4, encoder_attention_heads=4, **kwargs):
+    return EncoderConfig(
+        multiway=True, 
+        layernorm_embedding=False, normalize_output=True, no_output_layer=True, 
+        drop_path_rate=drop_path_rate, encoder_embed_dim=768, encoder_attention_heads=encoder_attention_heads, 
+        encoder_ffn_embed_dim=int(768 * mlp_ratio), encoder_layers=encoder_layers,
+    )
 
 class Pooler(nn.Module):
     def __init__(self, input_features, output_features, norm_layer):
@@ -45,29 +43,44 @@ class Pooler(nn.Module):
         pooled_output = self.activation(pooled_output)
         return pooled_output
 
-class ViVQABEiT3(BEiT3):
+class ViVQABEiT3(nn.Module):
     def __init__(self, args):
-        super(ViVQABEiT3, self).__init__(args)
+        super().__init__()
+        self.args = args
+        assert args.multiway
+        assert not args.share_encoder_input_output_embed
+        
         self.text_embed = BartPhoExtractor()
         self.linear = nn.Linear(1024, 768)
+        
+        # being consistent with Fairseq, which starts from 2 for position embedding
+        num_position_embeddings = 64
+        embed_positions = MutliwayEmbedding(
+            modules=[
+                PositionalEmbedding(num_position_embeddings + 2, args.encoder_embed_dim),
+                PositionalEmbedding(args.max_source_positions, args.encoder_embed_dim),
+            ],
+            dim=1,
+        )
+        self.encoder = Encoder(
+            args,
+            embed_tokens=None,
+            embed_positions=embed_positions,
+            output_projection=None,
+            is_encoder_decoder=False,
+        )
 
-    def forward(self, textual_tokens, visual_tokens, text_padding_position):
-        x1 = self.vision_embed(visual_tokens, vision_masked_position=None)
-        multiway_split_position = x1.size(1)
-        
-        x2 = self.text_embed(textual_tokens, text_padding_position)
-        x2 = self.linear(x2)
-        
-        x = torch.cat([x1, x2], dim=1)
-        if text_padding_position is not None:
-            encoder_padding_mask = torch.cat(
-                [
-                    torch.zeros(x1.shape[:-1]).to(x1.device).bool(),
-                    text_padding_position,
-                ],
-                dim=1,
-            )
-            
+    def forward(self, textual_tokens, visual_embeded, text_padding_position):
+        multiway_split_position = visual_embeded.size(1)
+        x2 = self.linear(self.text_embed(textual_tokens, text_padding_position))
+        x = torch.cat([visual_embeded, x2], dim=1)
+        encoder_padding_mask = torch.cat(
+            [
+                torch.zeros(visual_embeded.shape[:-1]).to(visual_embeded.device).bool(),
+                text_padding_position,
+            ],
+            dim=1,
+        )
         encoder_out = self.encoder(
             src_tokens=None,
             encoder_padding_mask=encoder_padding_mask,
@@ -126,9 +139,9 @@ class BEiT3ForVietnameseVisualQuestionAnswering(BEiT3Wrapper):
         )
         self.pooler.apply(self._init_weights)
         self.head = nn.Sequential(
-            nn.Linear(embed_dim, embed_dim * 2), 
+            nn.Linear(embed_dim, embed_dim * 2),
             norm_layer(embed_dim * 2), 
-            nn.GELU(), 
+            nn.GELU(),
             nn.Linear(embed_dim * 2, num_classes), 
         )
         self.head.apply(self._init_weights)
@@ -139,7 +152,7 @@ class BEiT3ForVietnameseVisualQuestionAnswering(BEiT3Wrapper):
         
         outputs = self.beit3(
             textual_tokens=question, 
-            visual_tokens=image, 
+            visual_embeded=image, 
             text_padding_position=padding_mask, 
         )
         x = outputs["encoder_out"]

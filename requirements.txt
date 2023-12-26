@@ -9,3 +9,4 @@ Pillow
 torch
 transformers
 mlflow
+efficientnet_pytorch

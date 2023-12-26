@@ -45,6 +45,16 @@ options:
   --classes CLASSES
 ```
 # Example
+Change directory.
+```bash
+cd beit3/HCMUS
+```
+Install.
+```bash
+pip install salesforce-lavis
+pip install torchscale underthesea mlflow efficientnet_pytorch
+```
+Run training.
 ```bash
 !python main.py --log-level 'info'\
                 --image-path './data/images' \

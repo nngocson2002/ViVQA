@@ -56,7 +56,7 @@ pip install torchscale underthesea mlflow efficientnet_pytorch
 ```
 Run training.
 ```bash
-!python main.py --log-level 'info'\
+python main.py --log-level 'info'\
                 --image-path './data/images' \
                 --train-path './data/ViVQA-csv/train.csv'\
                 --test-path './data/ViVQA-csv/test.csv' \

@@ -41,15 +41,14 @@ def get_options():
     args.add_argument("--image-path", type=str, default="./data/images")
     args.add_argument("--ans-path", type=str, default="./data/vocab.json")
     args.add_argument("--train-path", type=str, default="./data/ViVQA-csv/train.csv")
-    args.add_argument("--test-path", type=str, default="./data/ViVQA-csv/train.csv")
-    args.add_argument("--feature-paths", type=str, default="./features")
-
+    args.add_argument("--test-path", type=str, default="./data/ViVQA-csv/test.csv")
+    # args.add_argument("--feature-paths", type=str, default="./features")
 
     # Model setting
-    args.add_argument("--efficientnet-b", choices=[0, 1, 2, 3, 4, 5, 6, 7], default=7)
+    # args.add_argument("--efficientnet-b", choices=[0, 1, 2, 3, 4, 5, 6, 7], default=7)
     args.add_argument("--drop-path-rate", type=float, default=0.3)
-    args.add_argument("--encoder-layers", type=int, default=4)
-    args.add_argument("--encoder-attention-heads-layers", type=int, default=4)
+    args.add_argument("--encoder-layers", type=int, default=6)
+    args.add_argument("--encoder-attention-heads-layers", type=int, default=6)
     args.add_argument("--classes", type=int, default=353)
 
     opt = args.parse_args()
@@ -58,28 +57,7 @@ def get_options():
 def main():
     opt = get_options()
 
-    if not os.path.exists(f'{opt.feature_paths}'):
-        os.makedirs(f'{opt.feature_paths}')
-
-    print('Extracting image features...')
-    print('*****Extract features from Blip-2*****')
-    vision_embed = Blip2ViTExtractor()
-    if not os.path.exists(f'{opt.feature_paths}/{vision_embed.model_name}.hdf5'):
-        extract_features(vision_embed, opt, model_name=vision_embed.model_name)
-    else:
-        print('Features from Blip-2 already exist!')
-
-    print(f'*****Extract features from Efficientnet-{opt.efficientnet_b}*****')
-    vision_embed = EfficientnetExtractor(model_name=f'efficientnet-b{opt.efficientnet_b}')
-    if not os.path.exists(f'{opt.feature_paths}/{vision_embed.model_name}.hdf5'):
-        extract_features(vision_embed, opt, model_name=vision_embed.model_name)
-    else:
-        print(f'Features from Efficientnet-b{opt.efficientnet_b} already exist!')
-    print('Extract completed!')
-    
-    feature_paths = glob.glob(os.path.join(opt.feature_paths, '*.hdf5'))
-
-    train_dataset, test_dataset = get_dataset(opt, feature_paths)
+    train_dataset, test_dataset = get_dataset(opt)
 
     model = create_model('vivqa_model', 
                         num_classes=opt.classes, 

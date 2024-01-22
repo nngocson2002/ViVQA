@@ -4,89 +4,127 @@ from transformers import AutoTokenizer
 from underthesea import word_tokenize
 import re
 import json
-import os
-import h5py
 import torch
 import pandas as pd
+from omegaconf import OmegaConf
+from lavis.common.registry import registry
+from typing import List, Optional, Union
+import transformers
+from transformers.utils import TensorType
+from lavis.processors.base_processor import BaseProcessor
+from PIL import Image
 
-tokenizer = AutoTokenizer.from_pretrained("vinai/bartpho-word", use_fast=False)
+class Process:
+    def __init__(self):
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.image_processor = self.load_preprocess()
+        self.tokenizer = AutoTokenizer.from_pretrained("vinai/bartpho-word", use_fast=False)
 
+    def load_preprocess(self):
+        config = OmegaConf.load(registry.get_model_class(name="blip2_feature_extractor").default_config_path(model_type="pretrain"))
+        preprocess_cfg = config.preprocess
+        def _build_proc_from_cfg(cfg):
+            return (
+                registry.get_processor_class(cfg.name).from_config(cfg)
+                if cfg is not None
+                else BaseProcessor()
+            )
+        vis_proc_cfg = preprocess_cfg.get("vis_processor")
+        vis_eval_cfg = vis_proc_cfg.get("eval")
+        vis_processors = _build_proc_from_cfg(vis_eval_cfg)
+        return vis_processors
+
+    def __call__(
+        self,
+        image,
+        text: Union[str, List[str], List[int]] = None,
+        add_special_tokens: bool = True,
+        padding: Union[bool, str, transformers.utils.generic.PaddingStrategy] = False,
+        truncation: Union[bool, str, transformers.tokenization_utils_base.TruncationStrategy] = None,
+        max_length: Optional[int] = None,
+        stride: int = 0,
+        is_split_into_words: bool = False,
+        pad_to_multiple_of: Optional[int] = None,
+        return_tensors: Optional[Union[str, TensorType]] = None,
+        return_token_type_ids: Optional[bool] = None,
+        return_attention_mask: Optional[bool] = None,
+        return_overflowing_tokens: bool = False,
+        return_special_tokens_mask: bool = False,
+        return_offsets_mapping: bool = False,
+        return_length: bool = False,
+        verbose: bool = True,
+    ):
+        image = self.image_processor(image.convert("RGB"))
+
+        text = word_tokenize(text.lower(), format='text')
+        text = self.tokenizer.encode_plus(
+            text=text,
+            add_special_tokens=add_special_tokens,
+            padding=padding,
+            truncation=truncation,
+            max_length=max_length,
+            stride=stride,
+            is_split_into_words=is_split_into_words,
+            pad_to_multiple_of=pad_to_multiple_of,
+            return_tensors=return_tensors,
+            return_token_type_ids=return_token_type_ids,
+            return_attention_mask=return_attention_mask,
+            return_overflowing_tokens=return_overflowing_tokens,
+            return_special_tokens_mask=return_special_tokens_mask,
+            return_offsets_mapping=return_offsets_mapping,
+            return_length=return_length,
+            verbose=verbose
+        )
+        text['padding_mask'] = 1 - text['attention_mask']
+
+        return {
+            'image': image.to(self.device),
+            'question': text['input_ids'].to(self.device),
+            'padding_mask': text['padding_mask'].to(self.device)
+        }
+    
 class ViVQADataset(Dataset):
-    def __init__(self, df, answer_path, *image_features_paths):
-        with open(answer_path, 'r') as f:
+    def __init__(self, dataframe, processor, image_path, answers_path):
+        with open(answers_path, 'r') as f:
             vocab = json.loads(f.read())
-
         self.vocab_a = vocab['answer']
-        self.dataset = df
-
-        # q and a
-        self.questions = [self.question2ids(question) for question in preprocess_questions(df)]
-        self.answers = self.answers2idx(preprocess_answers(df), self.vocab_a)
+        self.answers = self.answers2idx(preprocess_answers(dataframe), self.vocab_a)
         
-        # v 
-        self.image_features_paths = image_features_paths
-        self.visuals_id_to_index = self.create_visuals_id_to_index()
-        self.visuals_ids = self.dataset['img_id']
-
-        self.feature_names = [os.path.basename(path).split('.')[0] for path in self.image_features_paths]
-
-    def question2ids(self, question, max_len=40):
-        tkz = tokenizer.encode_plus(
-            text=question,
-            padding='max_length',
-            max_length=max_len,
-            truncation=True, 
-            return_tensors='pt', 
-            return_attention_mask=True,
-            return_token_type_ids=False
-        ) 
-        # {'input_ids': tensor, 'attention_mask': tensor}
-        return tkz
+        self.dataframe = dataframe
+        self.image_path = image_path
+        self.processor = processor
 
     def answers2idx(self, answers, vocab_a):
         return [vocab_a[answer] for answer in answers]
 
-    def create_visuals_id_to_index(self):
-        if not hasattr(self, 'features_files'):
-            self.features_files = [h5py.File(image_features_path, 'r') for image_features_path in self.image_features_paths]
-        visuals_ids = self.features_files[-1]['ids'][()]
-        visuals_id_to_index = {id: i for i, id in enumerate(visuals_ids)}
-        return visuals_id_to_index
-
-    def load_image(self, image_id):
-        index = self.visuals_id_to_index[image_id]
-        data_img = [features_file['features'] for features_file in self.features_files]
-        d = {}
-        for name, data in zip(self.feature_names, data_img):
-            d[name] = torch.from_numpy(data[index].astype('float32'))
-        return d
-
     def __len__(self):
-        return len(self.questions)
+        return len(self.dataframe)
 
     def __getitem__(self, idx):
-        image_id = self.visuals_ids[idx]
-        v = self.load_image(image_id)
-        v = torch.cat([v[self.feature_names[0]], v[self.feature_names[1]]], dim=0)
-        
-        q_inputs, q_attn_mask = self.questions[idx].values()
-        a = self.answers[idx]
-        
-        item = {
-            'image': v, 
-            'question': q_inputs, 
-            'padding_mask': q_attn_mask,
-            'labels': a
-        }
-        
-        return item
+        question = self.dataframe['question'].iloc[idx]
+        img_id = self.dataframe['img_id'].iloc[idx]
+        answer = self.answers[idx]
+
+        image = Image.open(f'{self.image_path}/{img_id}.jpg')
+        inputs = self.processor(image, question, 
+                                return_tensors='pt', 
+                                return_token_type_ids=False,
+                                return_attention_mask=True, 
+                                truncation=True,
+                                padding='max_length', 
+                                max_length=40)
+        inputs |= {'labels': answer.to(self.processor.device)}
+
+        return inputs
     
-def get_dataset(opt, feature_paths):
+def get_dataset(opt):
+    processor = Process()
+
     df_train = pd.read_csv(opt.train_path, index_col=0)
     df_test = pd.read_csv(opt.test_path, index_col=0)
 
-    train_dataset = ViVQADataset(df_train, opt.ans_path, *feature_paths)
-    test_dataset = ViVQADataset(df_test, opt.ans_path, *feature_paths)
+    train_dataset = ViVQADataset(df_train, processor, opt.image_path, opt.ans_path)
+    test_dataset = ViVQADataset(df_test, processor, opt.image_path, opt.ans_path)
 
     return train_dataset, test_dataset
     

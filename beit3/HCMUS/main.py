@@ -2,14 +2,11 @@ from transformers import TrainingArguments, Trainer
 import mlflow
 import argparse
 import os
-import glob
 import numpy as np
 from timm.models import create_model
 from sklearn.metrics import accuracy_score
 import model
 from dataset import get_dataset
-from extract_vision import extract_features
-from VisionEmbedding import Blip2ViTExtractor, EfficientnetExtractor
 
 os.environ['MLFLOW_EXPERIMENT_NAME'] = 'mlflow-vivqa'
 
@@ -80,7 +77,7 @@ def main():
         weight_decay=opt.weight_decay,
         dataloader_num_workers=opt.workers,
         report_to='mlflow',
-        disable_tqdm=False
+        save_safetensors=False
     )
 
     trainer = Trainer(

@@ -77,7 +77,8 @@ def main():
         weight_decay=opt.weight_decay,
         dataloader_num_workers=opt.workers,
         report_to='mlflow',
-        save_safetensors=False
+        save_safetensors=False,
+        disable_tqdm=False
     )
 
     trainer = Trainer(

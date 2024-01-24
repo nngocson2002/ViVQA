@@ -79,7 +79,8 @@ def main():
         learning_rate=opt.learning_rate,
         weight_decay=opt.weight_decay,
         dataloader_num_workers=opt.workers,
-        report_to='mlflow'
+        report_to='mlflow',
+        disable_tqdm=False
     )
 
     trainer = Trainer(

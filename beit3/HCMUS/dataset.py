@@ -78,9 +78,9 @@ class Process:
         text['padding_mask'] = 1 - text['attention_mask']
 
         return {
-            'image': image.to(self.device),
-            'question': text['input_ids'].to(self.device),
-            'padding_mask': text['padding_mask'].to(self.device)
+            'image': image,
+            'question': text['input_ids'],
+            'padding_mask': text['padding_mask']
         }
     
 class ViVQADataset(Dataset):
@@ -113,7 +113,7 @@ class ViVQADataset(Dataset):
                                 truncation=True,
                                 padding='max_length', 
                                 max_length=40)
-        inputs |= {'labels': answer.to(self.processor.device)}
+        inputs |= {'labels': answer}
 
         return inputs
     

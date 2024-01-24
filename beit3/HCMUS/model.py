@@ -107,7 +107,7 @@ class BEiT3Wrapper(nn.Module):
         super().__init__()
         self.args = args
         self.beit3 = ViVQABEiT3(args)
-        self.apply(self._init_weights)
+        # self.apply(self._init_weights)
 
     def fix_init_weight(self):
         def rescale(param, layer_id):
@@ -124,14 +124,14 @@ class BEiT3Wrapper(nn.Module):
     def no_weight_decay(self):
         return {'pos_embed', 'cls_token', 'beit3.encoder.embed_positions.A.weight', 'beit3.vision_embed.cls_token', 'logit_scale'}
 
-    def _init_weights(self, m):
-        if isinstance(m, nn.Linear):
-            trunc_normal_(m.weight, std=.02)
-            if isinstance(m, nn.Linear) and m.bias is not None:
-                nn.init.constant_(m.bias, 0)
-        elif isinstance(m, nn.LayerNorm):
-            nn.init.constant_(m.bias, 0)
-            nn.init.constant_(m.weight, 1.0)
+    # def _init_weights(self, m):
+    #     if isinstance(m, nn.Linear):
+    #         trunc_normal_(m.weight, std=.02)
+    #         if isinstance(m, nn.Linear) and m.bias is not None:
+    #             nn.init.constant_(m.bias, 0)
+    #     elif isinstance(m, nn.LayerNorm):
+    #         nn.init.constant_(m.bias, 0)
+    #         nn.init.constant_(m.weight, 1.0)
     
 
 class BEiT3ForVietnameseVisualQuestionAnswering(BEiT3Wrapper):

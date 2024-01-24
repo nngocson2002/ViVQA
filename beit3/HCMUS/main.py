@@ -30,8 +30,8 @@ def get_options():
     args.add_argument("--logging-strategy", choices=["no", "epoch", "steps"], default="epoch")
     args.add_argument("--save-strategy", choices=["no", "epoch", "steps"], default="epoch")
     args.add_argument("--save-total-limit", type=int, default=1)
-    args.add_argument("-tb", "--train-batch-size", type=int, default=75)
-    args.add_argument("-eb", "--eval-batch-size", type=int, default=75)
+    args.add_argument("-tb", "--train-batch-size", type=int, default=65)
+    args.add_argument("-eb", "--eval-batch-size", type=int, default=65)
     args.add_argument("-e", "--epochs", type=int, default=15)
     args.add_argument("-lr", "--learning-rate", type=float, default=3e-5)
     args.add_argument("--weight-decay", type=float, default=0.01)
@@ -74,7 +74,7 @@ def main():
         save_strategy=opt.save_strategy,
         save_total_limit=opt.save_total_limit,
         per_device_train_batch_size=opt.train_batch_size,
-        per_device_eval_batch_size=opt.train_batch_size,
+        per_device_eval_batch_size=opt.eval_batch_size,
         num_train_epochs=opt.epochs,
         learning_rate=opt.learning_rate,
         weight_decay=opt.weight_decay,

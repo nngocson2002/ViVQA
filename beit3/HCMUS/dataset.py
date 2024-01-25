@@ -117,7 +117,7 @@ class ViVQADataset(Dataset):
 
         return inputs
     
-def get_dataset(opt):
+def get_dataset(opt, validation=True):
     processor = Process()
 
     df_train = pd.read_csv(opt.train_path, index_col=0)
@@ -125,6 +125,11 @@ def get_dataset(opt):
 
     train_dataset = ViVQADataset(df_train, processor, opt.image_path, opt.ans_path)
     test_dataset = ViVQADataset(df_test, processor, opt.image_path, opt.ans_path)
+
+    if validation:
+        df_val = pd.read_csv(opt.val_path, index_col=0)
+        val_dataset = ViVQADataset(df_val, processor, opt.image_path, opt.ans_path)
+        return train_dataset, val_dataset, test_dataset
 
     return train_dataset, test_dataset
     

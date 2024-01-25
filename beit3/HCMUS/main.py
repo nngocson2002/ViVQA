@@ -93,6 +93,7 @@ def _get_train_config(opt):
         disable_tqdm=False,
         overwrite_output_dir=True,
         metric_for_best_model='accuracy',
+        evaluation_strategy='epoch',
         load_best_model_at_end=True,
         greater_is_better=True
     )

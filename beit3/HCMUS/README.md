@@ -53,15 +53,20 @@ Install.
 ```bash
 pip install salesforce-lavis
 pip install torchscale underthesea mlflow efficientnet_pytorch
+pip install --upgrade transformers
 ```
 Run training.
 ```bash
-!python main.py --log-level 'info'\
+python main.py  --log-level 'info'\
+                --output-dir './output'\
                 --image-path './data/images' \
                 --train-path './data/ViVQA-csv/train.csv'\
+                --val-path './data/ViVQA-csv/validation.csv'\
                 --test-path './data/ViVQA-csv/test.csv' \
                 --ans-path './data/vocab.json'\
-                --feature-paths './features'\
-                --output-dir './output'\
-                --epoch 15
+                --train-batch-size 32 \
+                --eval-batch-size 32 \
+                --encoder-layers 6 \
+                --encoder-attention-heads-layers 6 \
+                --epoch 25
 ```

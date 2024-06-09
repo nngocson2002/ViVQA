@@ -33,6 +33,7 @@ image = Image.open('./ViVQA/demo/1.jpg').convert('RGB')
 question = "màu áo của con chó là gì?"
 
 inputs = processor(image, question, return_tensors='pt')
+inputs["image"] = inputs["image"].unsqueeze(0)
 
 model.eval()
 with torch.no_grad():
